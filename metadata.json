@@ -1,0 +1,8 @@
+{
+  "name": "Remix Custom Apparel 3D Configurator",
+  "description": "Web-based 3D product configurator for custom apparel and jerseys with realtime 3D preview and 2D design data representation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
