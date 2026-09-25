@@ -1,0 +1,8 @@
+{
+  "name": "Remix Custom Apparel 3D Configurator",
+  "description": "DIGID ENGINE — Web-based 3D product configurator for custom apparel and jerseys by DIGID Apparel with real-time 3D preview and 2D design data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
