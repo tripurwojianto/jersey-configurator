@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Shirt, Layers, Download, Loader2 } from 'lucide-react';
-import { useDesignState, DEFAULT_JERSEY_CONFIG } from '../state/designState';
+import { useDesignState, getInitialJerseyConfig } from '../state/designState';
+import { getApparelModelByProductId } from '../data/models';
 import { ConfiguratorPanel } from './ConfiguratorPanel';
 import { JerseyViewer, JerseyViewerHandle } from './JerseyViewer';
 import { TwoDPreview } from './TwoDPreview';
@@ -12,11 +13,52 @@ interface ConfiguratorProps {
 }
 
 export const Configurator: React.FC<ConfiguratorProps> = ({ onNavigateToDeveloper }) => {
-  const { config, updateConfig, resetConfig, serializeConfig } = useDesignState(DEFAULT_JERSEY_CONFIG);
+  const { config, updateConfig, resetConfig, serializeConfig } = useDesignState(getInitialJerseyConfig());
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const jerseyViewerRef = useRef<JerseyViewerHandle | null>(null);
   const [isExportingGLB, setIsExportingGLB] = useState(false);
+
+  // Synchronize URL query parameter with active model for shareability
+  useEffect(() => {
+    if (typeof window === 'undefined' || !config.productId) return;
+    try {
+      const url = new URL(window.location.href);
+      const currentParam = url.searchParams.get('productId');
+      if (currentParam !== config.productId) {
+        url.searchParams.set('productId', config.productId);
+        window.history.replaceState({}, '', url.toString());
+      }
+    } catch {
+      // Safe fallback if URL modification is restricted
+    }
+  }, [config.productId]);
+
+  // Support browser Back/Forward navigation with URL query params
+  useEffect(() => {
+    const handlePopState = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const urlProductId = params.get('productId');
+        if (urlProductId) {
+          const matched = getApparelModelByProductId(urlProductId);
+          if (matched && matched.productId !== config.productId) {
+            updateConfig({
+              productId: matched.productId,
+              productName: matched.name,
+              modelSource: matched.sourceType,
+              modelId: matched.productId,
+              customGlbUrl: matched.glbUrl || '',
+            });
+          }
+        }
+      } catch {
+        // Safe fallback
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [config.productId, updateConfig]);
 
   const handleExportGLB = async () => {
     if (jerseyViewerRef.current) {
@@ -34,7 +76,7 @@ export const Configurator: React.FC<ConfiguratorProps> = ({ onNavigateToDevelope
   return (
     <div className="flex flex-col min-h-screen w-full bg-[#f8fafc] text-[#0f172a] overflow-x-hidden overflow-y-auto font-sans">
       {/* 1. TOP HEADER (NAVIGASI + BRANDING) */}
-      <header className="h-14 sm:h-16 border-b border-slate-800 bg-[#0f172a] px-3.5 sm:px-6 flex items-center z-30 flex-shrink-0 sticky top-0 shadow-sm">
+      <header className="h-14 sm:h-16 border-b border-slate-800 bg-[#0f172a] px-3.5 sm:px-6 flex items-center justify-between z-30 flex-shrink-0 sticky top-0 shadow-sm">
         <div className="flex items-center gap-2.5 sm:gap-3">
           {/* Back to Online Store Link */}
           <a
@@ -68,6 +110,17 @@ export const Configurator: React.FC<ConfiguratorProps> = ({ onNavigateToDevelope
                 3D CONFIGURATOR
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* Active Product ID Badge (Polo/PDL Reference Convention) */}
+        <div className="flex items-center ml-auto pl-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/90 border border-slate-700/70 text-slate-300 font-mono text-[10px] sm:text-xs shadow-xs">
+            <span className="text-slate-400 font-sans hidden sm:inline">Product ID:</span>
+            <span className="text-slate-400 font-sans sm:hidden">ID:</span>
+            <span className="text-indigo-300 font-semibold font-mono tracking-tight">
+              {config.productId || 'sujaya-sj-01'}
+            </span>
           </div>
         </div>
       </header>

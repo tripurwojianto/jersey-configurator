@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { JerseyConfig, ColorPreset } from '../types/design';
+import { getApparelModelByProductId } from '../data/models';
 
 export const COLOR_PRESETS: ColorPreset[] = [
   { name: 'DIGID Dark Slate', hex: '#0f172a' },
@@ -55,7 +56,36 @@ export const DEFAULT_JERSEY_CONFIG: JerseyConfig = {
   customGlbUrl: 'https://ik.imagekit.io/digidstudio/jersey_revisi.glb',
 };
 
-export function useDesignState(initialConfig: JerseyConfig = DEFAULT_JERSEY_CONFIG) {
+/**
+ * Reads ?productId= from URL query params safely and matches existing model data.
+ * Falls back to DEFAULT_JERSEY_CONFIG if no parameter or invalid product ID is given.
+ */
+export function getInitialJerseyConfig(): JerseyConfig {
+  if (typeof window !== 'undefined' && window.location) {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlProductId = params.get('productId');
+      if (urlProductId) {
+        const matchedModel = getApparelModelByProductId(urlProductId.trim());
+        if (matchedModel) {
+          return {
+            ...DEFAULT_JERSEY_CONFIG,
+            productId: matchedModel.productId,
+            productName: matchedModel.name,
+            modelSource: matchedModel.sourceType,
+            modelId: matchedModel.productId,
+            customGlbUrl: matchedModel.glbUrl || '',
+          };
+        }
+      }
+    } catch {
+      // Fallback safely to default
+    }
+  }
+  return DEFAULT_JERSEY_CONFIG;
+}
+
+export function useDesignState(initialConfig: JerseyConfig = getInitialJerseyConfig()) {
   const [config, setConfig] = useState<JerseyConfig>(initialConfig);
 
   const updateConfig = useCallback((updates: Partial<JerseyConfig>) => {
